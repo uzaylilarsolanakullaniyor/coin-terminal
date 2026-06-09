@@ -140,7 +140,7 @@
   .grid {
     flex: 1 1 auto;
     display: grid;
-    grid-template-columns: 1.55fr 1fr 1.05fr;
+    grid-template-columns: 0.6fr 1.25fr 1fr 1.05fr;
     grid-template-rows: 1fr 1fr;
     gap: 10px;
     min-height: 0;
@@ -207,12 +207,13 @@
   .scroll::-webkit-scrollbar-track, .news-mask::-webkit-scrollbar-track { background: transparent; }
 
   /* ===== GRID PLACEMENT ===== */
-  #panel-bubbles   { grid-column: 1; grid-row: 1; }
-  #panel-table     { grid-column: 1; grid-row: 2; }
-  #panel-portfolio { grid-column: 2; grid-row: 1; }
-  #panel-fng       { grid-column: 2; grid-row: 2; }
-  #panel-news      { grid-column: 3; grid-row: 1; }
-  #panel-calendar  { grid-column: 3; grid-row: 2; }
+  #panel-liq       { grid-column: 1; grid-row: 1 / 3; }
+  #panel-bubbles   { grid-column: 2; grid-row: 1; }
+  #panel-table     { grid-column: 2; grid-row: 2; }
+  #panel-portfolio { grid-column: 3; grid-row: 1; }
+  #panel-fng       { grid-column: 3; grid-row: 2; }
+  #panel-news      { grid-column: 4; grid-row: 1; }
+  #panel-calendar  { grid-column: 4; grid-row: 2; }
 
   /* ===== BUBBLES ===== */
   #bubbleCanvas { display:block; width:100%; height:100%; cursor: crosshair; }
@@ -277,6 +278,42 @@
   .kind-tag.t-STOCK     { color:#3fb6ff; border-color:rgba(63,182,255,.34); background:rgba(63,182,255,.10); }
   .kind-tag.t-INDEX     { color:#c77dff; border-color:rgba(199,125,255,.34); background:rgba(199,125,255,.10); }
   .kind-tag.t-COMMODITY { color:#ffd23f; border-color:rgba(255,210,63,.34); background:rgba(255,210,63,.10); }
+
+  /* ===== LIQUIDATIONS ===== */
+  .liq-sound { background:none; border:1px solid var(--border); border-radius:5px; cursor:pointer; font-size:11px; line-height:1; padding:3px 6px; color:var(--muted); }
+  .liq-sound.on { border-color:var(--green-dim); color:var(--green); box-shadow:0 0 8px rgba(0,255,136,.2); }
+  .liq-sum { flex:0 0 auto; display:flex; border-bottom:1px solid var(--border-soft); }
+  .liq-sum .ls { flex:1; padding:5px 6px; text-align:center; }
+  .liq-sum .ls.long  { background:rgba(255,68,102,.06); }
+  .liq-sum .ls.short { background:rgba(0,255,136,.06); }
+  .liq-sum .k { display:block; font-size:8px; letter-spacing:.8px; color:var(--muted); text-transform:uppercase; }
+  .liq-sum .v { font-size:13px; font-weight:700; }
+  .liq-sum .ls.long .v  { color:var(--red); }
+  .liq-sum .ls.short .v { color:var(--green); }
+  .liq-list { height:100%; }
+  .liq-row {
+    display:flex; justify-content:space-between; align-items:center; gap:6px;
+    padding:5px 9px; border-bottom:1px solid rgba(0,0,0,.35); font-size:11px;
+    animation: liqIn .28s ease;
+  }
+  @keyframes liqIn { from{opacity:0; transform:translateY(-7px);} to{opacity:1; transform:none;} }
+  .liq-row.long  { background:linear-gradient(90deg, rgba(255,68,102,.24), rgba(255,68,102,.06)); border-left:3px solid var(--red); }
+  .liq-row.short { background:linear-gradient(90deg, rgba(0,255,136,.22), rgba(0,255,136,.05)); border-left:3px solid var(--green); }
+  .liq-l { display:flex; align-items:center; gap:6px; min-width:0; }
+  .liq-side { font-size:9px; }
+  .liq-row.long .liq-side  { color:var(--red); }
+  .liq-row.short .liq-side { color:var(--green); }
+  .liq-sym { font-weight:700; color:var(--text-bright); letter-spacing:.3px; }
+  .liq-ex { font-size:7.5px; letter-spacing:.5px; color:var(--muted2); border:1px solid var(--border); border-radius:3px; padding:0 3px; }
+  .liq-r { text-align:right; white-space:nowrap; }
+  .liq-val { display:block; font-weight:700; font-size:12px; color:var(--text-bright); }
+  .liq-meta { font-size:8.5px; color:var(--muted); }
+  .liq-row.big { padding:8px 9px; }
+  .liq-row.big .liq-val { font-size:15px; }
+  .liq-row.long.big  { box-shadow: inset 0 0 22px rgba(255,68,102,.45), 0 0 12px rgba(255,68,102,.3); border-left-width:4px; }
+  .liq-row.short.big { box-shadow: inset 0 0 22px rgba(0,255,136,.4), 0 0 12px rgba(0,255,136,.3); border-left-width:4px; }
+  .liq-row.big { animation: liqIn .28s ease, liqPulse 1.3s ease-out; }
+  @keyframes liqPulse { 0%{ filter:brightness(1.7);} 100%{ filter:brightness(1);} }
   /* prices search / add */
   #panel-table .panel-body { display:flex; flex-direction:column; }
   .px-scroll { flex:1 1 auto; min-height:0; overflow-y:auto; }
@@ -474,7 +511,7 @@
 
   @media (max-width: 1380px){
     body { font-size: 12px; }
-    .grid { grid-template-columns: 1.4fr 1fr 1fr; }
+    .grid { grid-template-columns: 0.58fr 1.2fr 1fr 1fr; }
   }
 </style>
 </head>
@@ -495,6 +532,22 @@
   </header>
 
   <div class="grid">
+    <!-- LIQUIDATIONS -->
+    <section class="panel" id="panel-liq">
+      <div class="panel-head">
+        <h2><span class="ico">⚡</span> LIQUIDATIONS</h2>
+        <div class="head-right">
+          <button class="liq-sound" id="liq-sound" title="Toggle liquidation sound">🔇</button>
+          <span class="live-dot" id="liq-dot" style="background:var(--muted2);box-shadow:none"></span>
+        </div>
+      </div>
+      <div class="liq-sum">
+        <div class="ls long"><span class="k">Longs rekt</span><span class="v num" id="liq-long">$0</span></div>
+        <div class="ls short"><span class="k">Shorts rekt</span><span class="v num" id="liq-short">$0</span></div>
+      </div>
+      <div class="panel-body"><div class="liq-list scroll" id="liq-list"></div></div>
+    </section>
+
     <!-- BUBBLES -->
     <section class="panel" id="panel-bubbles">
       <div class="panel-head">
@@ -733,7 +786,7 @@ let lastBtcTick = null;
 function updateBtcBox(p){
   const el = $('#hdr-btc'), box = $('#btc-box');
   if (!el || !box) return;
-  el.textContent = fmtNum(p, 0);                       // e.g. 62,751
+  el.textContent = fmtNum(p, 2);                       // e.g. 62,674.50
   if (lastBtcTick != null && p !== lastBtcTick){
     const up = p > lastBtcTick;
     box.classList.remove('up','down','flash');
@@ -1659,6 +1712,128 @@ function renderNews(items){
 }
 
 /* ============================================================
+   7. LIQUIDATIONS — Binance Futures all-market force-order stream
+   Live WebSocket (wss://fstream.binance.com). SELL = a long got liquidated (red),
+   BUY = a short got liquidated (green). Synthesized sound via Web Audio.
+   ============================================================ */
+const liqFeed = [];
+let liqLive = false;
+function setLiqStatus(state){            // 'off' | 'connecting' | 'live'
+  const dot = $('#liq-dot'); if (!dot) return;
+  const c = state==='live' ? 'var(--green)' : state==='connecting' ? 'var(--yellow)' : 'var(--muted2)';
+  dot.style.background = c;
+  dot.style.boxShadow  = state==='off' ? 'none' : '0 0 8px '+c;
+  dot.title = state==='live' ? 'Live' : state==='connecting' ? 'Connected — waiting for liquidations' : 'Offline';
+}
+function addLiquidation(l){
+  if (!liqLive){ liqLive = true; setLiqStatus('live'); }
+  liqFeed.unshift(l);
+  if (liqFeed.length > 60) liqFeed.pop();
+  queueLiqRender();
+  liqSound(l);
+}
+
+// Binance USDⓈ-M futures — all-market force orders
+function connectBinanceLiq(){
+  let ws;
+  try { ws = new WebSocket('wss://fstream.binance.com/ws/!forceOrder@arr'); }
+  catch(e){ setTimeout(connectBinanceLiq, 5000); return; }
+  ws.onopen  = () => { if (!liqLive) setLiqStatus('connecting'); };
+  ws.onclose = () => setTimeout(connectBinanceLiq, 4000);
+  ws.onerror = () => { try { ws.close(); } catch(e){} };
+  ws.onmessage = (ev) => {
+    let d; try { d = JSON.parse(ev.data); } catch(e){ return; }
+    (Array.isArray(d) ? d : [d]).forEach(m => {
+      const o = m.o; if (!o) return;
+      const price = +o.ap || +o.p, usd = price * (+o.q);
+      if (!isFinite(usd) || usd <= 0) return;
+      addLiquidation({ sym:o.s.replace(/(USDT|USDC|BUSD)$/,''), price, usd, side:o.S, t:+o.T||Date.now(), ex:'BIN' });
+    });
+  };
+}
+
+// Bybit linear perps — allLiquidation on top symbols
+const BYBIT_SYMS = ['BTCUSDT','ETHUSDT','SOLUSDT','XRPUSDT','DOGEUSDT','BNBUSDT','ADAUSDT','AVAXUSDT','LINKUSDT','LTCUSDT','TRXUSDT','DOTUSDT','SUIUSDT','APTUSDT','1000PEPEUSDT','WIFUSDT','TIAUSDT','ARBUSDT','OPUSDT','INJUSDT'];
+function connectBybitLiq(){
+  let ws;
+  try { ws = new WebSocket('wss://stream.bybit.com/v5/public/linear'); }
+  catch(e){ setTimeout(connectBybitLiq, 5000); return; }
+  ws.onopen = () => {
+    if (!liqLive) setLiqStatus('connecting');
+    for (let i=0;i<BYBIT_SYMS.length;i+=10)
+      ws.send(JSON.stringify({ op:'subscribe', args:BYBIT_SYMS.slice(i,i+10).map(s=>'allLiquidation.'+s) }));
+    ws._ping = setInterval(()=>{ try{ ws.send(JSON.stringify({op:'ping'})); }catch(e){} }, 20000);
+  };
+  ws.onclose = () => { clearInterval(ws._ping); setTimeout(connectBybitLiq, 4000); };
+  ws.onerror = () => { try { ws.close(); } catch(e){} };
+  ws.onmessage = (ev) => {
+    let d; try { d = JSON.parse(ev.data); } catch(e){ return; }
+    if (!d.topic || d.topic.indexOf('allLiquidation') !== 0 || !Array.isArray(d.data)) return;
+    d.data.forEach(x => {
+      const price = +x.p, usd = (+x.v) * price;
+      if (!isFinite(usd) || usd <= 0) return;
+      addLiquidation({ sym:(x.s||'').replace(/USDT$/,''), price, usd, side: x.S==='Sell'?'SELL':'BUY', t:+x.T||Date.now(), ex:'BYB' });
+    });
+  };
+}
+let lastLiqRender = 0, liqPending = false;
+function queueLiqRender(){
+  const now = performance.now();
+  if (now - lastLiqRender > 130){ lastLiqRender = now; renderLiquidations(); }
+  else if (!liqPending){ liqPending = true; setTimeout(()=>{ liqPending=false; lastLiqRender=performance.now(); renderLiquidations(); }, 130); }
+}
+function liqUsd(n){ return n>=1e6 ? '$'+(n/1e6).toFixed(2)+'M' : n>=1e3 ? '$'+(n/1e3).toFixed(1)+'K' : '$'+Math.round(n); }
+function liqAgo(t){ const s=Math.floor((Date.now()-t)/1000); return s<1?'now':s<60?s+'s':Math.floor(s/60)+'m'; }
+function renderLiquidations(){
+  const list = $('#liq-list'); if (!list) return;
+  if (!liqFeed.length){
+    list.innerHTML = `<div class="empty"><span class="ico">⚡</span>Waiting for liquidations…<br><span style="font-size:9px">live across Binance &amp; Bybit perps</span></div>`;
+  } else {
+    list.innerHTML = liqFeed.map(l => {
+      const long = l.side === 'SELL';        // SELL closes a long → long liquidated
+      const big = l.usd >= 100000;
+      return `<div class="liq-row ${long?'long':'short'}${big?' big':''}">
+        <div class="liq-l"><span class="liq-side">${long?'▼':'▲'}</span><span class="liq-sym">${l.sym}</span><span class="liq-ex">${l.ex||''}</span></div>
+        <div class="liq-r"><span class="liq-val num">${liqUsd(l.usd)}</span><span class="liq-meta"><span class="num">${fmtNum(l.price, l.price<10?4:2)}</span> · <span class="liq-time" data-t="${l.t}">${liqAgo(l.t)}</span></span></div>
+      </div>`;
+    }).join('');
+  }
+  let lo=0, sh=0; liqFeed.forEach(l => { l.side==='SELL' ? lo+=l.usd : sh+=l.usd; });
+  if ($('#liq-long'))  $('#liq-long').textContent  = liqUsd(lo);
+  if ($('#liq-short')) $('#liq-short').textContent = liqUsd(sh);
+}
+setInterval(() => { document.querySelectorAll('#liq-list .liq-time').forEach(el => el.textContent = liqAgo(+el.dataset.t)); }, 1000);
+
+/* synthesized "cha-ching" via Web Audio (no files needed) */
+let liqAudio = null, liqSoundOn = false, lastLiqBeep = 0;
+function liqTone(freq, dur, vol, type){
+  if (!liqAudio) return;
+  const o = liqAudio.createOscillator(), g = liqAudio.createGain();
+  o.type = type || 'sine'; o.frequency.value = freq;
+  o.connect(g); g.connect(liqAudio.destination);
+  const t = liqAudio.currentTime;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+function liqSound(l){
+  if (!liqSoundOn || !liqAudio) return;
+  if (l.usd < 20000) return;                       // only audible for notable hits
+  const now = performance.now();
+  if (now - lastLiqBeep < 180) return;             // rate-limit the chatter
+  lastLiqBeep = now;
+  const short = l.side === 'BUY';                  // green = short rekt (higher pitch)
+  if (l.usd >= 250000){                            // big — a 3-note flourish
+    liqTone(short?660:520, 0.10, 0.30, 'triangle');
+    setTimeout(()=>liqTone(short?990:392, 0.16, 0.26, 'triangle'), 85);
+    setTimeout(()=>liqTone(short?1320:330, 0.20, 0.20, 'sine'), 185);
+  } else {
+    liqTone(short?760:440, 0.07, 0.16, 'sine');
+  }
+}
+
+/* ============================================================
    CLOCK
    ============================================================ */
 setInterval(()=>{
@@ -1680,6 +1855,19 @@ renderCalendar();
 // prices watchlist: add a coin or stock by symbol
 $('#px-add').onclick = addCustom;
 $('#px-q').addEventListener('keydown', e => { if (e.key === 'Enter') addCustom(); });
+
+// liquidations feed (multi-exchange) + sound toggle
+renderLiquidations();
+connectBinanceLiq();
+connectBybitLiq();
+$('#liq-sound').onclick = () => {
+  liqSoundOn = !liqSoundOn;
+  if (liqSoundOn && !liqAudio){ try { liqAudio = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){} }
+  if (liqAudio && liqAudio.state === 'suspended') liqAudio.resume();
+  $('#liq-sound').textContent = liqSoundOn ? '🔊' : '🔇';
+  $('#liq-sound').classList.toggle('on', liqSoundOn);
+  if (liqSoundOn) liqTone(880, 0.08, 0.16, 'sine');   // confirmation blip
+};
 
 // 🔥 meme easter egg — click the BTC box 10× (rapidly) to launch the video
 // (the chosen clip is age-restricted, so YouTube only allows playback on its own
@@ -1715,6 +1903,7 @@ document.querySelectorAll('#panel-table thead th[data-sort]').forEach(th => {
 renderIndices();   // paint from cache immediately
 
 fetchTickers();
+fetchBtcTick();
 fetchHype();
 fetchTradFi();
 fetchFNG();
@@ -1728,6 +1917,7 @@ setTimeout(() => { if (!Object.keys(tradfiRows).length) fetchTradFi(); }, 5000);
 setTimeout(() => { if (!Object.keys(tradfiRows).length) fetchTradFi(); }, 15000);
 
 setInterval(fetchTickers, 5000);      // 5s price refresh (Binance)
+setInterval(fetchBtcTick, 3000);      // 3s — header BTC box (green/red on every move)
 setInterval(fetchHype, 60*1000);      // 60s (CoinGecko — HYPE)
 setInterval(fetchTradFi, 60*1000);    // 60s (CNBC — S&P/NASDAQ/Gold/Oil)
 setInterval(fetchFNG, 5*60*1000);     // 5 min
