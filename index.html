@@ -98,6 +98,33 @@
   .stat-chip .val { font-size: 14px; font-weight: 600; color: var(--text-bright); }
   .clock { min-width: 92px; }
 
+  /* BTC box — background reacts to live price moves (up=green, down=red) + 10-click easter egg */
+  .stat-chip.btc-box {
+    border-left: none;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 4px 16px;
+    margin-left: 6px;
+    background: #0d1322;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background .55s ease, border-color .55s ease, box-shadow .55s ease;
+  }
+  .stat-chip.btc-box .val { font-size: 16px; font-weight: 700; color: var(--text-bright); transition: color .4s; }
+  .stat-chip.btc-box.up {
+    background: rgba(0,255,136,.14); border-color: rgba(0,255,136,.5); box-shadow: 0 0 14px rgba(0,255,136,.28);
+  }
+  .stat-chip.btc-box.up .val { color: var(--green); }
+  .stat-chip.btc-box.down {
+    background: rgba(255,68,102,.14); border-color: rgba(255,68,102,.5); box-shadow: 0 0 14px rgba(255,68,102,.28);
+  }
+  .stat-chip.btc-box.down .val { color: var(--red); }
+  .stat-chip.btc-box.up.flash   { animation: btcUp .8s ease-out; }
+  .stat-chip.btc-box.down.flash { animation: btcDown .8s ease-out; }
+  @keyframes btcUp   { 0%{ background:rgba(0,255,136,.5);  box-shadow:0 0 22px rgba(0,255,136,.6);} 100%{ background:rgba(0,255,136,.14);} }
+  @keyframes btcDown { 0%{ background:rgba(255,68,102,.5); box-shadow:0 0 22px rgba(255,68,102,.6);} 100%{ background:rgba(255,68,102,.14);} }
+
   .live-dot {
     width: 7px; height: 7px; border-radius: 50%;
     background: var(--green);
@@ -458,8 +485,7 @@
       <span class="logo">◈</span> COIN TERMINAL
     </div>
     <div class="spacer"></div>
-    <div class="stat-chip">
-      <span class="label">BTC / USDT</span>
+    <div class="stat-chip btc-box" id="btc-box" title="BTC / USDT">
       <span class="val num" id="hdr-btc">—</span>
     </div>
     <div class="stat-chip clock">
@@ -553,7 +579,7 @@
     <!-- FEAR & GREED -->
     <section class="panel" id="panel-fng">
       <div class="panel-head">
-        <h2><span class="ico">◐</span> CRYPTO FEAR &amp; GREED INDEX</h2>
+        <h2><span class="ico">◐</span> CRYPTO INDEXES</h2>
         <div class="head-right">
           <span class="warn-badge" id="warn-fng">⚠ LIVE DATA UNAVAILABLE</span>
           <span class="meta">COMPOSITE</span>
@@ -700,8 +726,28 @@ function renderAll(usdt, isCache){
   renderMarketTable();
   renderPortfolio();
   if (typeof renderIndices === 'function') renderIndices();   // refresh Altcoin Season + verdict
-  // header chip
-  if (tickerMap.BTC) $('#hdr-btc').textContent = '$'+smartPrice(tickerMap.BTC.lastPrice);
+}
+
+/* fast BTC price tick for the header box — flashes green/red on every up/down move */
+let lastBtcTick = null;
+function updateBtcBox(p){
+  const el = $('#hdr-btc'), box = $('#btc-box');
+  if (!el || !box) return;
+  el.textContent = fmtNum(p, 0);                       // e.g. 62,751
+  if (lastBtcTick != null && p !== lastBtcTick){
+    const up = p > lastBtcTick;
+    box.classList.remove('up','down','flash');
+    void box.offsetWidth;                              // restart the flash animation
+    box.classList.add(up ? 'up' : 'down', 'flash');
+  }
+  lastBtcTick = p;
+}
+async function fetchBtcTick(){
+  try {
+    const r = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
+    if (!r.ok) return;
+    updateBtcBox(+(await r.json()).price);
+  } catch(e){ /* keep last */ }
 }
 
 // bubble dataset = everything in the Prices table (crypto + TradFi),
@@ -1634,6 +1680,27 @@ renderCalendar();
 // prices watchlist: add a coin or stock by symbol
 $('#px-add').onclick = addCustom;
 $('#px-q').addEventListener('keydown', e => { if (e.key === 'Enter') addCustom(); });
+
+// 🔥 meme easter egg — click the BTC box 10× (rapidly) to launch the video
+// (the chosen clip is age-restricted, so YouTube only allows playback on its own
+//  site → we pop it in a small centered window; falls back to a new tab)
+(function(){
+  const box = $('#btc-box'); if (!box) return;
+  const URL = 'https://www.youtube.com/watch?v=R5TfZrANfAg';
+  let clicks = 0, last = 0;
+  box.addEventListener('click', () => {
+    const now = Date.now();
+    if (now - last > 1500) clicks = 0;        // must be rapid clicks
+    last = now;
+    if (++clicks >= 10){
+      clicks = 0;
+      const w = 880, h = 520;
+      const x = Math.max(0, (screen.width - w)/2), y = Math.max(0, (screen.height - h)/2);
+      const win = window.open(URL, 'memeVideo', `popup=yes,width=${w},height=${h},left=${x},top=${y}`);
+      if (!win) window.open(URL, '_blank', 'noopener');   // popup blocked → new tab
+    }
+  });
+})();
 
 // click a column header to sort by it (toggles asc/desc)
 document.querySelectorAll('#panel-table thead th[data-sort]').forEach(th => {
