@@ -579,9 +579,24 @@
     .grid { grid-template-columns: 0.58fr 1.2fr 1fr 1fr; }
   }
 
+  /* theme toggle button (next to the COIN TERMINAL brand) */
+  .theme-toggle{
+    background: rgba(255,255,255,0.07);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 3px 9px;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.14);
+    transition: transform .15s, background .15s;
+  }
+  .theme-toggle:hover{ transform: scale(1.1); }
+</style>
+<style id="light-css">
   /* ============================================================
      LIGHT LIQUID GLASS THEME — macOS-style frosted white glass.
-     Declared last so it overrides the dark base above.
+     This entire sheet is enabled/disabled by the ☀️/🌙 toggle.
      ============================================================ */
   :root {
     --bg:#dfe6f2; --bg2:#eef2fa;
@@ -677,6 +692,7 @@
   <header class="topbar">
     <div class="brand">
       <span class="logo">◈</span> COIN TERMINAL
+      <button class="theme-toggle" id="theme-toggle" title="Light / Dark theme">🌙</button>
     </div>
     <div class="spacer"></div>
     <div class="stat-chip btc-box" id="btc-box" title="BTC / USDT">
@@ -862,6 +878,8 @@
    CRYPTO COMMAND CENTER — vanilla JS
    ============================================================ */
 const $ = (s, r=document) => r.querySelector(s);
+const lightCss = document.getElementById('light-css');
+const isLight = () => !!lightCss && !lightCss.disabled;
 const fmtUSD = (n, d=2) => '$' + Number(n).toLocaleString('en-US',{minimumFractionDigits:d, maximumFractionDigits:d});
 const fmtNum = (n, d=2) => Number(n).toLocaleString('en-US',{minimumFractionDigits:d, maximumFractionDigits:d});
 function smartPrice(p){
@@ -1515,11 +1533,11 @@ function updateDonut(computed, total){
   const colors = computed.map((h,i)=>PF_COLORS[i % PF_COLORS.length]);
   const has = total > 0 && computed.length;
   const ds = has ? data : [1];
-  const cs = has ? colors : ['#d9e1ef'];
+  const cs = has ? colors : [isLight() ? '#d9e1ef' : '#1b2740'];
   if (!pfDonutChart){
     pfDonutChart = new Chart($('#pfDonut'), {
       type: 'doughnut',
-      data: { labels: has?labels:[''], datasets: [{ data: ds, backgroundColor: cs, borderColor:'#ffffff', borderWidth:2, hoverOffset:4 }] },
+      data: { labels: has?labels:[''], datasets: [{ data: ds, backgroundColor: cs, borderColor: isLight() ? '#ffffff' : '#0a0f1c', borderWidth:2, hoverOffset:4 }] },
       options: {
         cutout: '70%', responsive:true, maintainAspectRatio:false,
         plugins: { legend:{display:false}, tooltip: { enabled: has,
@@ -1530,6 +1548,7 @@ function updateDonut(computed, total){
     pfDonutChart.data.labels = has?labels:[''];
     pfDonutChart.data.datasets[0].data = ds;
     pfDonutChart.data.datasets[0].backgroundColor = cs;
+    pfDonutChart.data.datasets[0].borderColor = isLight() ? '#ffffff' : '#0a0f1c';
     pfDonutChart.options.plugins.tooltip.enabled = has;
     pfDonutChart.update('none');
   }
@@ -1570,7 +1589,11 @@ function arc(cx,cy,r,start,end){
   $('#fng-z3').setAttribute('d', arc(cx,cy,r,360,405));
   $('#fng-z4').setAttribute('d', arc(cx,cy,r,405,450));
 })();
-function fngColor(v){ return v<25?'#e02e50':v<50?'#d9731a':v<75?'#b8860b':'#009a55'; }
+function fngColor(v){
+  return isLight()
+    ? (v<25?'#e02e50':v<50?'#d9731a':v<75?'#b8860b':'#009a55')   // light theme: deeper tones
+    : (v<25?'#ff4466':v<50?'#ff9f43':v<75?'#ffd23f':'#00ff88'); // dark theme: neon tones
+}
 function setNeedle(v){
   // value 0->270deg, 100->450deg(=90); rotation of needle (points up at 0deg base = 360/0)
   const angle = 270 + (v/100)*180; // degrees in same system
@@ -2025,6 +2048,17 @@ $('#liq-sound').onclick = () => {
   $('#liq-sound').classList.toggle('on', liqSoundOn);
   if (liqSoundOn) liqTone(880, 0.08, 0.16, 'sine');   // confirmation blip
 };
+
+// ☀️/🌙 theme toggle — enables/disables the light-glass stylesheet
+function applyTheme(t){
+  if (lightCss) lightCss.disabled = (t !== 'light');
+  const b = $('#theme-toggle'); if (b) b.textContent = (t === 'light') ? '🌙' : '☀️';
+  cacheSet('cc_theme', t);
+  const f = cacheGet('cc_fng'); if (f) renderFNG(f);   // re-tint gauge colors for the theme
+  renderPortfolio();                                    // re-tint donut for the theme
+}
+$('#theme-toggle').onclick = () => applyTheme(isLight() ? 'dark' : 'light');
+applyTheme(cacheGet('cc_theme') || 'light');
 
 // 🔥 meme easter egg — click the BTC box 10× (rapidly) to launch the video
 // (the chosen clip is age-restricted, so YouTube only allows playback on its own
